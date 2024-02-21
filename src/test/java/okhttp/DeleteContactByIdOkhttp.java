@@ -1,38 +1,66 @@
 package okhttp;
 
 import com.google.gson.Gson;
-import dto.DeleteByIDResponseDTO;
+import dto.ContactDTO;
+import dto.MessageDTO;
 import dto.ErrorDTO;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
+import okhttp3.RequestBody;
 import okhttp3.Response;
 import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
+import java.util.Random;
+
+import static okhttp.LoginTestsOkhttp.JSON;
 
 public class DeleteContactByIdOkhttp {
+    String id;
     String token = "eyJhbGciOiJIUzI1NiJ9.eyJyb2xlcyI6WyJST0xFX1VTRVIiXSwic3ViIjoidGVzdC5hbm5hLmJvb2tAZ21haWwuY29tIiwiaXNzIjoiUmVndWxhaXQiLCJleHAiOjE3MDg4NzczMjcsImlhdCI6MTcwODI3NzMyN30.j4oTonpidIldPp1-uLZFZmONnGCxfsfrbzb1fsH3pVc";
     Gson gson = new Gson();
     OkHttpClient client = new OkHttpClient();
     @BeforeMethod
-    public void preCondition(){
+    public void preCondition() throws IOException {
+        int i = new Random().nextInt(1000)+1000;
+        ContactDTO contactDTO = ContactDTO.builder()
+                .name("Maya")
+                .lastName("Down")
+                .email("maya"+i+"@gmail.com")
+                .phone("123456"+i)
+                .address("NJ")
+                .description("Friend")
+                .build();
+        RequestBody body = RequestBody.create(gson.toJson(contactDTO), JSON);
+        Request request = new Request.Builder()
+                .url("https://contactapp-telran-backend.herokuapp.com/v1/contacts")
+                .post(body)
+                .addHeader("Authorization", token)
+                .build();
+        Response response = client.newCall(request).execute();
+        Assert.assertTrue(response.isSuccessful());
+        MessageDTO messageDTO = gson.fromJson(response.body().string(), MessageDTO.class);
+        String message = messageDTO.getMessage();
+        String[] all = message.split(": ");
+        id = all[1];
+        System.out.println(id);
         //create contact
-        //get id from "message" : "Contact was added!"
+        //get id from "message" : "Contact was added!ID: "
         //id
     }
 
     @Test
     public void deleteContactByIdSuccess() throws IOException {
         Request request = new Request.Builder()
-                .url("https://contactapp-telran-backend.herokuapp.com/v1/contacts/de6564a2-b53a-4fef-bd07-6d8e566aca49")
+                .url("https://contactapp-telran-backend.herokuapp.com/v1/contacts/" + id)
                 .delete()
                 .addHeader("Authorization", token)
                 .build();
         Response response = client.newCall(request).execute();
         Assert.assertEquals(response.code(), 200);
-        DeleteByIDResponseDTO dto = gson.fromJson(response.body().string(), DeleteByIDResponseDTO.class);
+        MessageDTO dto = gson.fromJson(response.body().string(), MessageDTO.class);
         System.out.println(dto.getMessage());
         Assert.assertEquals(dto.getMessage(), "Contact was deleted!");
     }
